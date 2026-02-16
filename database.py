@@ -1,9 +1,9 @@
-import mysql.connector
+import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 def get_connection():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="smart_assistant"
-    )
+    DATABASE_URL = os.environ.get("DATABASE_URL")
+
+    conn = psycopg2.connect(DATABASE_URL)
+    return conn

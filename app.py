@@ -1,3 +1,4 @@
+from psycopg2.extras import RealDictCursor
 from asyncio import tasks
 import email
 import os
@@ -89,7 +90,7 @@ def register():
         hashed_password = generate_password_hash(password)
 
         conn = get_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
 
         # 🔐 Check duplicate username or email
         cursor.execute("SELECT * FROM users WHERE username=%s OR email=%s", (username, email))
@@ -122,7 +123,7 @@ def check_username():
     username = request.args.get("username")
 
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
 
     cursor.execute("SELECT id FROM users WHERE username=%s", (username,))
     user = cursor.fetchone()
@@ -144,7 +145,7 @@ def login():
         password = request.form["password"]
 
         conn = get_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
 
         cursor.execute("SELECT * FROM users WHERE username=%s", (username,))
         user = cursor.fetchone()
@@ -189,7 +190,7 @@ def forgot_password():
         email = request.form["email"]
 
         conn = get_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
 
         cursor.execute("SELECT * FROM users WHERE email=%s", (email,))
         user = cursor.fetchone()
@@ -295,7 +296,7 @@ def profile():
         return redirect("/login")
 
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
 
     cursor.execute("SELECT * FROM users WHERE id=%s", (session["user_id"],))
     user = cursor.fetchone()
@@ -334,7 +335,7 @@ def change_password():
     new_password = request.form["new_password"]
 
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
 
     cursor.execute("SELECT password FROM users WHERE id=%s", (session["user_id"],))
     user = cursor.fetchone()
@@ -368,7 +369,7 @@ def delete_account():
     current_password = request.form["current_password"]
 
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
 
     cursor.execute("SELECT password FROM users WHERE id=%s", (session["user_id"],))
     user = cursor.fetchone()
@@ -403,7 +404,7 @@ def admin_dashboard():
         return redirect("/")
 
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
 
     # --------------------
     # STATISTICS
@@ -537,7 +538,7 @@ def reply_ticket(ticket_id):
         return redirect("/admin")
 
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
 
     cursor.execute("""
         SELECT support_tickets.*, users.email
@@ -598,7 +599,7 @@ def help_page():
         return redirect("/login")
 
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
 
     # Get user's tickets
     cursor.execute("""
@@ -715,7 +716,7 @@ def home():
     offset = (page - 1) * per_page
 
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
 
     # Count total tasks (not deleted)
     count_query = """
@@ -792,7 +793,7 @@ def delete_task(task_id):
 @app.route("/tasks")
 def get_tasks():
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
     cursor.execute("SELECT * FROM tasks WHERE user_id=%s ORDER BY id DESC",(session["user_id"],))
     tasks = cursor.fetchall()
     cursor.close()
@@ -850,7 +851,7 @@ def edit_task(task_id):
         return redirect("/login")
 
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
 
     if request.method == "POST":
         new_command = request.form["command"]
