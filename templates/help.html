@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+    {% block title %}Help & Support - Smart AI Assistant{% endblock %}
+
+    {% block content %}
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container d-flex justify-content-between">
+        <span class="navbar-brand">Help & Support</span>
+        <a href="/" class="btn btn-sm btn-outline-light">Back to Dashboard</a>
+    </div>
+</nav>
+
+<div class="container mt-5">
+
+    <div class="card shadow p-4">
+        <h4>📘 How to Use Smart AI Assistant</h4>
+        <hr>
+
+        <ul>
+            <li>Type natural language like: <b>"Send email at 7 PM saying meeting"</b></li>
+            <li>Use 24-hour format like: <b>20:00</b> for better accuracy</li>
+            <li>Pending tasks can be edited</li>
+            <li>Completed tasks can be deleted</li>
+            <li>Use filters to view specific tasks</li>
+        </ul>
+
+        <hr>
+
+        <h5>❓ Need Help?</h5>
+        <p>If you're facing any issue, contact support below.</p>
+
+        <form method="POST" action="/support">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="mb-3">
+                <label class="form-label">Subject</label>
+                <input type="text" name="subject" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Message</label>
+                <textarea name="message" rows="4" class="form-control" required></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Send Support Request</button>
+        </form>
+
+        {% if message %}
+        <div class="alert alert-success mt-3">
+            {{ message }}
+        </div>
+        {% endif %}
+
+        <hr>
+        <h5 class="mt-4">📨 Your Support Tickets</h5>
+
+        {% if tickets %}
+            {% for ticket in tickets %}
+                <div class="card mb-3 p-3">
+                    <h5>{{ ticket.subject }}</h5>
+                    <p>{{ ticket.message }}</p>
+                    <small>Status: {{ ticket.status }}</small>
+
+                    <hr>
+
+                    {% for reply in ticket.replies %}
+                        <div class="mb-2">
+                            <strong>
+                                {% if reply.sender == "admin" %}
+                                    Admin:
+                                {% else %}
+                                    You:
+                                {% endif %}
+                            </strong>
+                            <p>{{ reply.message }}</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-muted mt-3">No support tickets submitted yet.</p>
+        {% endif %}
+    </div>
+
+</div>
+
+{% endblock %}

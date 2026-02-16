@@ -1,0 +1,49 @@
+{% if tasks %}
+<div class="card shadow mt-4 p-3">
+    <h5 class="mb-3">📋 Task History</h5>
+
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>Select</th>
+                <th>Command</th>
+                <th>Status</th>
+                <th>Time</th>
+                <th>Message</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+            <tr>
+                <td class="task-select">
+                    <div class="task-number">{{ loop.index }}</div>
+                    <input type="checkbox" 
+                        class="form-check-input task-checkbox d-none"
+                        value="{{ task.id }}">
+                </td>
+
+                <td>{{ task.command }}</td>
+                <td>
+                    {% if task.status == 'completed' %}
+                        <span class="badge bg-success">✔ Completed</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark">⏳ Pending</span>
+                    {% endif %}
+                </td>
+
+                <td>{{ task.task_time }}</td>
+                <td>{{ task.task_message }}</td>
+                <td>
+                    <a href="/delete/{{ task.id }}" 
+                       class="btn btn-sm btn-danger"
+                       onclick="return confirm('Delete this task?')">
+                       Delete
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}

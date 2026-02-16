@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Register - Smart AI Assistant</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            height: 100vh;
+            background: linear-gradient(135deg, #1f4037, #99f2c8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .register-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            color: white;
+        }
+
+        .form-control {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            height: 56px;
+        }
+
+        .form-control::placeholder {
+            color: #eee;
+        }
+
+        .form-control:focus {
+            background: rgba(255,255,255,0.3);
+            box-shadow: none;
+            color: white;
+        }
+
+        a {
+            color: #fff;
+            text-decoration: underline;
+        }
+
+        a:hover {
+            color: #f1f1f1;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="register-card text-center">
+    <h3 class="mb-3">🤖 Smart AI Assistant</h3>
+    <p class="mb-4">Create your account to manage AI-powered tasks</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="form-floating mb-3">
+            <input type="text"
+                   name="username"
+                   id="username"
+                   class="form-control"
+                   placeholder="Username"
+                   value="{{ username or '' }}"
+                   required>
+            <label for="username">Username</label>
+            <small id="username-feedback" class="d-block mt-1"></small>
+        </div>
+
+        <div class="form-floating mb-3">
+            <input type="email"
+                   name="email"
+                   id="email"
+                   class="form-control"
+                   placeholder="Email"
+                   value="{{ email or '' }}"
+                   required>
+            <label for="email">Email Address</label>
+        </div>
+
+        <div class="form-floating mb-3">
+            <input type="password"
+                   name="password"
+                   id="password"
+                   class="form-control"
+                   placeholder="Password"
+                   required>
+            <label for="password">Password</label>
+        </div>
+
+        <div class="form-floating mb-3">
+            <input type="password"
+                   name="confirm_password"
+                   id="confirm_password"
+                   class="form-control"
+                   placeholder="Confirm Password"
+                   required>
+            <label for="confirm_password">Confirm Password</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100 mb-3">
+            Create Account
+        </button>
+    </form>
+
+    <small>
+        Already have an account?
+        <a href="/login">Login here</a>
+    </small>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+const usernameInput = document.getElementById("username");
+const feedback = document.getElementById("username-feedback");
+const registerButton = document.querySelector("button[type='submit']");
+
+usernameInput.addEventListener("input", function() {
+
+    const username = usernameInput.value.trim();
+
+    if (username.length < 3) {
+        feedback.textContent = "Username must be at least 3 characters.";
+        feedback.className = "text-warning";
+        registerButton.disabled = true;
+        return;
+    }
+
+    fetch(`/check-username?username=${username}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.available) {
+                feedback.textContent = "Username available ✔";
+                feedback.className = "text-success small";
+                registerButton.disabled = false;
+            } else {
+                feedback.textContent = "Username already taken ❌";
+                feedback.className = "text-danger small";
+                registerButton.disabled = true;
+            }
+        });
+});
+</script>
+
+</body>
+</html>
