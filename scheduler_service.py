@@ -1,3 +1,4 @@
+from psycopg2.extras import RealDictCursor
 from apscheduler.schedulers.background import BackgroundScheduler
 from database import get_connection
 from datetime import datetime
@@ -17,7 +18,7 @@ def check_tasks():
     print("Checking tasks...")  # 👈 confirms scheduler is running
 
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
