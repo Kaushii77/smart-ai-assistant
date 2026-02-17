@@ -2,7 +2,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 from database import get_connection
 from psycopg2.extras import RealDictCursor
-from email_service import send_email   # ✅ import from new file
+from email_service import send_email
 
 scheduler = BackgroundScheduler()
 
@@ -10,7 +10,7 @@ def check_tasks():
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-    now = datetime.now()
+    now = datetime.utcnow()   # ✅ IMPORTANT
 
     cursor.execute("""
         SELECT tasks.*, users.email
@@ -38,3 +38,6 @@ def check_tasks():
     conn.commit()
     cursor.close()
     conn.close()
+
+scheduler.add_job(check_tasks, 'interval', seconds=30)
+scheduler.start()
