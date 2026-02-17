@@ -12,7 +12,6 @@ from ai_parser import parse_command
 from datetime import datetime
 from flask import request, jsonify
 from itsdangerous import URLSafeTimedSerializer
-from scheduler_service import send_email
 from flask_wtf.csrf import CSRFProtect
 import re
 import json
@@ -21,6 +20,10 @@ from scheduler_service import check_tasks
 
 
 app = Flask(__name__)   # 👈 THIS MUST BE ABOVE @app.route
+
+if __name__ != "__main__":
+    from scheduler_service import scheduler
+    scheduler.start()
 
 from datetime import timedelta
 
@@ -199,6 +202,8 @@ def forgot_password():
             token = serializer.dumps(email, salt="password-reset-salt")
 
             reset_link = f"http://127.0.0.1:5000/reset-password/{token}"
+
+            from scheduler_service import send_email
 
             send_email(
                 email,
@@ -570,6 +575,8 @@ def reply_ticket(ticket_id):
     conn.commit()
     cursor.close()
     conn.close()
+
+    from scheduler_service import send_email
 
     send_email(
         user_email,
