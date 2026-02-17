@@ -1,6 +1,9 @@
+from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 from database import get_connection
 from email_service import send_email   # ✅ import from new file
+
+scheduler = BackgroundScheduler()
 
 def check_tasks():
     conn = get_connection()
