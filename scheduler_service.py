@@ -1,6 +1,6 @@
 from datetime import datetime
 from database import get_connection
-from scheduler_service import send_email
+from email_service import send_email   # ✅ import from new file
 
 def check_tasks():
     conn = get_connection()

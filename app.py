@@ -203,7 +203,7 @@ def forgot_password():
 
             reset_link = f"http://127.0.0.1:5000/reset-password/{token}"
 
-            from scheduler_service import send_email
+            from email_service import send_email
 
             send_email(
                 email,
@@ -576,7 +576,7 @@ def reply_ticket(ticket_id):
     cursor.close()
     conn.close()
 
-    from scheduler_service import send_email
+    from email_service import send_email
 
     send_email(
         user_email,
