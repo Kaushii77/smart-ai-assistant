@@ -3,8 +3,8 @@ from email.mime.text import MIMEText
 import os
 
 def send_email(to_email, subject, body):
-    sender = os.environ.get("EMAIL_USER")
-    password = os.environ.get("EMAIL_PASS")
+    sender = os.environ.get("EMAIL")
+    password = os.environ.get("EMAIL_PASSWORD")
 
     msg = MIMEText(body)
     msg["Subject"] = subject
