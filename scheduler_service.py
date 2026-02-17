@@ -7,6 +7,7 @@ from email_service import send_email
 scheduler = BackgroundScheduler()
 
 def check_tasks():
+    print("Scheduler running...")
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
@@ -23,6 +24,7 @@ def check_tasks():
     due_tasks = cursor.fetchall()
 
     for task in due_tasks:
+        print("Executing task:", task["id"])
         send_email(
             task["email"],
             "Task Reminder",
