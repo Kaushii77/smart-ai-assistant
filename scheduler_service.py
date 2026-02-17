@@ -11,7 +11,9 @@ def check_tasks():
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-    now = datetime.utcnow()   # ✅ IMPORTANT
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+
 
     cursor.execute("""
         SELECT tasks.*, users.email
