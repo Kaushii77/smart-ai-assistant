@@ -15,15 +15,13 @@ from itsdangerous import URLSafeTimedSerializer
 from flask_wtf.csrf import CSRFProtect
 import re
 import json
+import scheduler_service
 from scheduler_service import check_tasks
 
 
 
 app = Flask(__name__)   # 👈 THIS MUST BE ABOVE @app.route
 
-if __name__ != "__main__":
-    from scheduler_service import scheduler
-    scheduler.start()
 
 from datetime import timedelta
 
