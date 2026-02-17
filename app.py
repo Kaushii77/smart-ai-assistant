@@ -16,14 +16,11 @@ from scheduler_service import send_email
 from flask_wtf.csrf import CSRFProtect
 import re
 import json
+from scheduler_service import check_tasks
 
 
 
 app = Flask(__name__)   # 👈 THIS MUST BE ABOVE @app.route
-
-if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
-    import scheduler_service
-    scheduler_service.scheduler.start()
 
 from datetime import timedelta
 
@@ -656,6 +653,8 @@ def home():
 
     if "user_id" not in session:
         return redirect("/login")
+    
+    check_tasks()
 
     message = ""
 
