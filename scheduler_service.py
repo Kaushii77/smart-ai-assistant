@@ -26,11 +26,7 @@ def check_tasks():
 
     for task in due_tasks:
         print("Executing task:", task["id"])
-        send_email(
-            task["email"],
-            "Task Reminder",
-            task["task_message"]
-        )
+        print("Would send email to:", task["email"])
 
         cursor.execute("""
             UPDATE tasks
