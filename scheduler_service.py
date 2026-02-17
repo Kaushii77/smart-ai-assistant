@@ -20,8 +20,7 @@ def check_tasks():
         FROM tasks
         JOIN users ON tasks.user_id = users.id
         WHERE tasks.status = 'pending'
-        AND tasks.task_time <= %s
-    """, (now,))
+    """)
 
     due_tasks = cursor.fetchall()
 
