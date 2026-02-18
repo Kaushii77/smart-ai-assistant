@@ -22,6 +22,11 @@ from scheduler_service import check_tasks
 
 app = Flask(__name__)   # 👈 THIS MUST BE ABOVE @app.route
 
+from scheduler_service import scheduler
+
+if __name__ != "__main__":
+    if not scheduler.running:
+        scheduler.start()
 
 from datetime import timedelta
 
@@ -659,7 +664,6 @@ def home():
     if "user_id" not in session:
         return redirect("/login")
     
-    check_tasks()
 
     message = ""
 
@@ -708,7 +712,7 @@ def home():
         cursor.close()
         conn.close()
 
-        message = "Task saved with AI parsing!"
+        return redirect(url_for("home"))
 
     filter_status = request.args.get("filter", "all")
 
