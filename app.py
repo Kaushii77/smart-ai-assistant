@@ -681,7 +681,7 @@ def home():
         time_only = data["time"]
         task_message = data["message"]
 
-        now = datetime.now()
+        now = datetime.utcnow()
 
         # Create datetime for today
         task_datetime = datetime.strptime(

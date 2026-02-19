@@ -7,6 +7,9 @@ from email_service import send_email
 scheduler = BackgroundScheduler()
 
 def check_tasks():
+
+    print("Checking tasks...")
+    
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
