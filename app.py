@@ -27,6 +27,7 @@ from scheduler_service import scheduler
 if __name__ != "__main__":
     if not scheduler.running:
         scheduler.start()
+        print("🚀 Scheduler started")
 
 from datetime import timedelta
 

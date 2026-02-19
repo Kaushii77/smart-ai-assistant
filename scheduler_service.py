@@ -6,7 +6,10 @@ from email_service import send_email
 
 scheduler = BackgroundScheduler()
 
+print("✅ scheduler_service imported")
+
 def check_tasks():
+    print("🔥 Scheduler triggered")
 
     print("Checking tasks...")
 
