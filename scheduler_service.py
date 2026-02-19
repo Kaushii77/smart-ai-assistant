@@ -9,7 +9,7 @@ scheduler = BackgroundScheduler()
 def check_tasks():
 
     print("Checking tasks...")
-    
+
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
@@ -20,8 +20,8 @@ def check_tasks():
         FROM tasks
         JOIN users ON tasks.user_id = users.id
         WHERE tasks.status = 'pending'
-        AND tasks.task_time <= %s
-    """, (now,))
+        AND tasks.task_time <= NOW()
+    """)
 
     due_tasks = cursor.fetchall()
 
