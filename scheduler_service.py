@@ -32,4 +32,3 @@ def check_tasks():
 
     conn.commit()
     cursor.close()
-    conn.close()
