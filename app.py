@@ -26,7 +26,6 @@ from scheduler_service import scheduler
 
 if __name__ != "__main__":
     if not scheduler.running:
-        scheduler.start()
         print("🚀 Scheduler started")
 
 from datetime import timedelta
@@ -40,6 +39,11 @@ app.config["SESSION_COOKIE_NAME"] = "smart_assistant_session"
 app.config["SESSION_REFRESH_EACH_REQUEST"] = True
 
 serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
+
+@app.route("/cron/run-tasks")
+def cron_run_tasks():
+    check_tasks()
+    return "OK"
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
