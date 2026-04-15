@@ -1,6 +1,4 @@
 from psycopg2.extras import RealDictCursor
-from asyncio import tasks
-import email
 import os
 from flask import (
     Flask, render_template, request, redirect,
@@ -209,7 +207,8 @@ def forgot_password():
         if user:
             token = serializer.dumps(email, salt="password-reset-salt")
 
-            reset_link = f"http://127.0.0.1:5000/reset-password/{token}"
+            base_url = os.environ.get("BASE_URL", "http://127.0.0.1:5000")
+            reset_link = f"{base_url}/reset-password/{token}"
 
             from email_service import send_email
 

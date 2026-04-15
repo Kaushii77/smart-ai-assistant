@@ -4,6 +4,9 @@ from datetime import datetime
 from database import get_connection
 from psycopg2.extras import RealDictCursor
 from email_service import send_email
+from apscheduler.schedulers.background import BackgroundScheduler
+
+scheduler = BackgroundScheduler()
 
 def check_tasks():
     conn = get_connection()
@@ -32,3 +35,8 @@ def check_tasks():
 
     conn.commit()
     cursor.close()
+    conn.close()  # ✅ Fixed: properly close connection
+
+# Schedule check_tasks to run every minute
+scheduler.add_job(check_tasks, 'interval', minutes=1)
+scheduler.start()
