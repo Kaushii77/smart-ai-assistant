@@ -5,13 +5,13 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
-      - key: postgresql://neondb_owner:npg_Vdbu5N8flMHe@ep-late-unit-a1wmgw6u-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+      - key: ""
         sync: false
-      - key: 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
+      - key: ""
         sync: false
-      - key: smartassistant.official@gmail.com
+      - key: ""
         sync: false
-      - key: cgwpmbjwwjqqhudi
+      - key: ""
         sync: false
-      - key: https://smart-ai-assistant-m09y.onrender.com
+      - key: ""
         sync: false
