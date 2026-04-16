@@ -207,7 +207,6 @@ def forgot_password():
         if user:
             token = serializer.dumps(email, salt="password-reset-salt")
 
-            from flask import request
             reset_link = f"{request.host_url}/reset-password/{token}"
 
             from email_service import send_email
