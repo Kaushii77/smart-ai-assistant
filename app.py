@@ -1003,4 +1003,4 @@ def session_management():
         session.modified = True
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
