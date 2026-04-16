@@ -1,4 +1,6 @@
 from psycopg2.extras import RealDictCursor
+from asyncio import tasks
+import email
 import os
 from flask import (
     Flask, render_template, request, redirect,
@@ -40,8 +42,34 @@ serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
 
 @app.route("/cron/run-tasks")
 def cron_run_tasks():
-    check_tasks()
-    return "OK"
+    try:
+        check_tasks()
+        return jsonify({"status": "ok", "message": "Tasks checked"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/debug/pending-tasks")
+def debug_pending_tasks():
+    """Debug: shows your pending tasks and current server time."""
+    if "user_id" not in session:
+        return redirect("/login")
+    conn = get_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    cursor.execute("""
+        SELECT id, action, task_time, task_message, status
+        FROM tasks
+        WHERE user_id = %s AND status = 'pending' AND is_deleted = FALSE
+        ORDER BY task_time
+    """, (session["user_id"],))
+    tasks = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return jsonify({
+        "server_time_now": str(datetime.now()),
+        "pending_tasks": [dict(t) for t in tasks]
+    })
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -207,7 +235,7 @@ def forgot_password():
         if user:
             token = serializer.dumps(email, salt="password-reset-salt")
 
-            reset_link = f"{request.host_url}/reset-password/{token}"
+            reset_link = f"{request.host_url}reset-password/{token}"
 
             from email_service import send_email
 
@@ -683,14 +711,22 @@ def home():
         action = data["action"]
         time_only = data["time"]
         task_message = data["message"]
+        task_date = data.get("date", datetime.now().strftime("%Y-%m-%d"))
 
-        now = datetime.utcnow()
+        now = datetime.now()
 
-        # Create datetime for today
-        task_datetime = datetime.strptime(
-            f"{now.strftime('%Y-%m-%d')} {time_only}",
-            "%Y-%m-%d %H:%M"
-        )
+        # Build the full datetime from parsed date + time
+        try:
+            task_datetime = datetime.strptime(
+                f"{task_date} {time_only}",
+                "%Y-%m-%d %H:%M"
+            )
+        except ValueError:
+            # Fallback: use today's date if parsing fails
+            task_datetime = datetime.strptime(
+                f"{now.strftime('%Y-%m-%d')} {time_only}",
+                "%Y-%m-%d %H:%M"
+            )
 
         # If time already passed today → schedule for tomorrow
         if task_datetime <= now:
@@ -874,13 +910,20 @@ def edit_task(task_id):
         action = data["action"]
         time_only = data["time"]
         task_message = data["message"]
+        task_date = data.get("date", datetime.now().strftime("%Y-%m-%d"))
 
         now = datetime.now()
 
-        task_datetime = datetime.strptime(
-            f"{now.strftime('%Y-%m-%d')} {time_only}",
-            "%Y-%m-%d %H:%M"
-        )
+        try:
+            task_datetime = datetime.strptime(
+                f"{task_date} {time_only}",
+                "%Y-%m-%d %H:%M"
+            )
+        except ValueError:
+            task_datetime = datetime.strptime(
+                f"{now.strftime('%Y-%m-%d')} {time_only}",
+                "%Y-%m-%d %H:%M"
+            )
 
         # If time already passed today → schedule tomorrow
         if task_datetime <= now:
