@@ -207,8 +207,8 @@ def forgot_password():
         if user:
             token = serializer.dumps(email, salt="password-reset-salt")
 
-            base_url = os.environ.get("BASE_URL", "http://127.0.0.1:5000")
-            reset_link = f"{base_url}/reset-password/{token}"
+            from flask import request
+            reset_link = f"{request.host_url}/reset-password/{token}"
 
             from email_service import send_email
 
