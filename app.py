@@ -30,6 +30,10 @@ if __name__ != "__main__":
 
 from datetime import timedelta
 
+# IST is UTC+5:30. Tasks entered by users are in IST, but the server runs in UTC.
+# We convert user-entered IST times to UTC before storing in the database.
+IST_OFFSET = timedelta(hours=5, minutes=30)
+
 app.config["SECRET_KEY"] = "super_secret_key"
 
 csrf = CSRFProtect(app)
@@ -728,11 +732,15 @@ def home():
                 "%Y-%m-%d %H:%M"
             )
 
-        # If time already passed today → schedule for tomorrow
-        if task_datetime <= now:
-            task_datetime += timedelta(days=1)
+        # Convert IST (user-entered) to UTC for DB storage (server runs in UTC)
+        task_datetime_utc = task_datetime - IST_OFFSET
+        now_utc = datetime.utcnow()
 
-        full_datetime = task_datetime.strftime("%Y-%m-%d %H:%M:%S")
+        # If UTC time already passed today → schedule for tomorrow
+        if task_datetime_utc <= now_utc:
+            task_datetime_utc += timedelta(days=1)
+
+        full_datetime = task_datetime_utc.strftime("%Y-%m-%d %H:%M:%S")
 
         conn = get_connection()
         cursor = conn.cursor()
@@ -925,11 +933,15 @@ def edit_task(task_id):
                 "%Y-%m-%d %H:%M"
             )
 
-        # If time already passed today → schedule tomorrow
-        if task_datetime <= now:
-            task_datetime += timedelta(days=1)
+        # Convert IST to UTC for DB storage
+        task_datetime_utc = task_datetime - IST_OFFSET
+        now_utc = datetime.utcnow()
 
-        full_datetime = task_datetime.strftime("%Y-%m-%d %H:%M:%S")
+        # If UTC time already passed today → schedule tomorrow
+        if task_datetime_utc <= now_utc:
+            task_datetime_utc += timedelta(days=1)
+
+        full_datetime = task_datetime_utc.strftime("%Y-%m-%d %H:%M:%S")
 
         # 🔹 Update EVERYTHING
         cursor.execute("""

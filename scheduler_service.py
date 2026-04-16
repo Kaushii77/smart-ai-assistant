@@ -26,8 +26,8 @@ def check_tasks():
         conn = get_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-        now = datetime.now()
-        print(f"[check_tasks] Running at {now}")
+        now = datetime.utcnow()  # Server runs in UTC; task_times are stored in UTC
+        print(f"[check_tasks] Running at {now} UTC")
 
         cursor.execute("""
             SELECT tasks.*, users.email
