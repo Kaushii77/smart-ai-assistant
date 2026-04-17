@@ -171,17 +171,17 @@ def register():
             from email_service import send_email
             send_email(
                 email,
-                "Activate Your Smart AI Assistant Account",
+                "Activate Your Smart Assistant Account",
                 f"""Hi {name},
 
-Welcome back to Smart AI Assistant! Your account has been restored. Please click the link below to activate:
+Welcome back to Smart Assistant! Your account has been restored. Please click the link below to activate:
 
 {activation_link}
 
 This link will expire in 24 hours.
 
 Regards,
-Smart AI Assistant Team"""
+Smart Assistant Team"""
             )
             flash("Account restored! Please check your email to activate.", "success")
             return redirect("/login")
@@ -206,10 +206,10 @@ Smart AI Assistant Team"""
         from email_service import send_email
         send_email(
             email,
-            "Activate Your Smart AI Assistant Account",
+            "Activate Your Smart Assistant Account",
             f"""Hi {name},
 
-Welcome to Smart AI Assistant! Please click the link below to activate your account:
+Welcome to Smart Assistant! Please click the link below to activate your account:
 
 {activation_link}
 
@@ -218,7 +218,7 @@ This link will expire in 24 hours.
 If you did not create this account, please ignore this email.
 
 Regards,
-Smart AI Assistant Team"""
+Smart Assistant Team"""
         )
 
         flash("Account created! Please check your email to activate your account.", "info")
@@ -345,7 +345,7 @@ def forgot_password():
 
             send_email(
                 email,
-                "Password Reset - Smart AI Assistant",
+                "Password Reset - Smart Assistant",
                 f"""
             Hello,
 
@@ -356,7 +356,7 @@ def forgot_password():
             This link will expire in 10 minutes.
 
             Regards,
-            Smart AI Assistant
+            Smart Assistant
             """
             )
 
@@ -789,7 +789,7 @@ Reply:
 {reply_message}
 
 Thank you,
-Smart AI Assistant Team
+Smart Assistant Team
         """
     )
 

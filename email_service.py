@@ -14,7 +14,7 @@ def send_email(to_email, subject, body):
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = f"Smart AI Assistant <{sender}>"
+    msg["From"] = f"Smart Assistant <{sender}>"
     msg["To"] = to_email
 
     # Plain text part
