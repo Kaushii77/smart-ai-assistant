@@ -47,6 +47,7 @@
                     {% endif %}
                 {% endwith %}
 
+                <!-- Update Name -->
                 <form method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="form-floating mb-3">
@@ -59,21 +60,61 @@
                             required>
                         <label for="name">Full Name</label>
                     </div>
-
-                    <div class="form-floating mb-3">
-                        <input type="email"
-                            name="email"
-                            id="email"
-                            class="form-control"
-                            placeholder="Email"
-                            value="{{ user.email }}"
-                            required>
-                        <label for="email">Email Address</label>
-                    </div>
                     <button class="btn btn-primary w-100">
-                        Update Profile
+                        Update Name
                     </button>
                 </form>
+
+                <hr>
+                <h6>Change Email Address</h6>
+                <p class="text-muted small mb-2">
+                    Current email: <strong>{{ user.email }}</strong>
+                </p>
+
+                {% if session.get("email_change_new") %}
+                <!-- OTP Verification Step -->
+                <div class="alert alert-info py-2 small">
+                    A verification code was sent to <strong>{{ session["email_change_new"] }}</strong>.
+                </div>
+                <form method="POST" action="/verify-email-change">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-floating mb-3">
+                        <input type="text"
+                            name="otp"
+                            id="otp"
+                            class="form-control"
+                            placeholder="6-digit code"
+                            maxlength="6"
+                            pattern="[0-9]{6}"
+                            autocomplete="one-time-code"
+                            required>
+                        <label for="otp">Enter 6-digit Code</label>
+                    </div>
+                    <button class="btn btn-success w-100 mb-2">Verify & Update Email</button>
+                </form>
+                <form method="POST" action="/request-email-change">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="new_email" value="{{ session['email_change_new'] }}">
+                    <button class="btn btn-outline-secondary btn-sm w-100">Resend Code</button>
+                </form>
+                {% else %}
+                <!-- Request Email Change Step -->
+                <form method="POST" action="/request-email-change">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-floating mb-3">
+                        <input type="email"
+                            name="new_email"
+                            id="new_email"
+                            class="form-control"
+                            placeholder="New Email Address"
+                            required>
+                        <label for="new_email">New Email Address</label>
+                    </div>
+                    <button class="btn btn-outline-primary w-100">
+                        Send Verification Code
+                    </button>
+                </form>
+                {% endif %}
 
 
                 <hr>

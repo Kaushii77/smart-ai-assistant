@@ -442,8 +442,7 @@ def profile():
 
     if request.method == "POST":
 
-        new_name  = request.form.get("name", "").strip()
-        new_email = request.form.get("email", "").strip().lower()
+        new_name = request.form.get("name", "").strip()
 
         if not new_name or len(new_name) < 2:
             flash("Name must be at least 2 characters.", "danger")
@@ -451,9 +450,10 @@ def profile():
             conn.close()
             return render_template("profile.html", user=user)
 
+        # Only update username — email changes require OTP verification via /request-email-change
         cursor.execute(
-            "UPDATE users SET username=%s, email=%s WHERE id=%s",
-            (new_name, new_email, session["user_id"])
+            "UPDATE users SET username=%s WHERE id=%s",
+            (new_name, session["user_id"])
         )
         conn.commit()
         session["username"] = new_name
@@ -469,6 +469,121 @@ def profile():
     conn.close()
 
     return render_template("profile.html", user=user)
+
+
+@app.route("/request-email-change", methods=["POST"])
+def request_email_change():
+    """Step 1: User submits new email → send 6-digit OTP to the new email."""
+    if "user_id" not in session:
+        return redirect("/login")
+
+    new_email = request.form.get("new_email", "").strip().lower()
+
+    # Basic email format check
+    import re as _re
+    if not _re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', new_email):
+        flash("Invalid email format.", "danger")
+        return redirect("/profile")
+
+    conn = get_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+    # Make sure no other active account uses this email
+    cursor.execute("SELECT id FROM users WHERE email = %s AND id != %s", (new_email, session["user_id"]))
+    if cursor.fetchone():
+        flash("That email is already in use by another account.", "danger")
+        cursor.close()
+        conn.close()
+        return redirect("/profile")
+
+    cursor.close()
+    conn.close()
+
+    # Generate a 6-digit OTP and store it in session (expires after 10 minutes)
+    import random, time
+    otp = str(random.randint(100000, 999999))
+    session["email_change_otp"]      = otp
+    session["email_change_new"]      = new_email
+    session["email_change_expires"]  = time.time() + 600  # 10 minutes
+
+    from email_service import send_email
+    try:
+        send_email(
+            new_email,
+            "Verify Your New Email – Smart Assistant",
+            f"""Hi,
+
+You requested to change your email address on Smart Assistant.
+
+Your verification code is:
+
+    {otp}
+
+This code is valid for 10 minutes. Do NOT share it with anyone.
+
+If you did not request this change, please ignore this email.
+
+— Smart Assistant Team"""
+        )
+        flash(f"A 6-digit verification code has been sent to {new_email}. Please enter it below.", "info")
+    except Exception as e:
+        flash(f"Failed to send verification email: {str(e)}", "danger")
+
+    return redirect("/profile")
+
+
+@app.route("/verify-email-change", methods=["POST"])
+def verify_email_change():
+    """Step 2: User submits the OTP → update email if correct and not expired."""
+    if "user_id" not in session:
+        return redirect("/login")
+
+    import time
+    entered_otp  = request.form.get("otp", "").strip()
+    stored_otp   = session.get("email_change_otp")
+    new_email    = session.get("email_change_new")
+    expires_at   = session.get("email_change_expires", 0)
+
+    if not stored_otp or not new_email:
+        flash("No pending email change request found. Please start again.", "danger")
+        return redirect("/profile")
+
+    if time.time() > expires_at:
+        # Clear stale OTP data
+        session.pop("email_change_otp", None)
+        session.pop("email_change_new", None)
+        session.pop("email_change_expires", None)
+        flash("The verification code has expired. Please request a new one.", "danger")
+        return redirect("/profile")
+
+    if entered_otp != stored_otp:
+        flash("Incorrect verification code. Please try again.", "danger")
+        return redirect("/profile")
+
+    # OTP correct — update the email
+    conn = get_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+    # Double-check no one grabbed this email in the meantime
+    cursor.execute("SELECT id FROM users WHERE email = %s AND id != %s", (new_email, session["user_id"]))
+    if cursor.fetchone():
+        flash("That email is already in use. Please choose a different one.", "danger")
+        cursor.close()
+        conn.close()
+        return redirect("/profile")
+
+    cursor.execute("UPDATE users SET email = %s WHERE id = %s", (new_email, session["user_id"]))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    # Clear OTP session keys
+    session.pop("email_change_otp", None)
+    session.pop("email_change_new", None)
+    session.pop("email_change_expires", None)
+
+    flash(f"Email address successfully updated to {new_email}!", "success")
+    return redirect("/profile")
 
 @app.route("/change-password", methods=["POST"])
 def change_password():
