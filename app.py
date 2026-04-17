@@ -546,7 +546,9 @@ def delete_account():
             SET password    = '',
                 username    = CONCAT('deleted_', id),
                 is_active   = FALSE,
-                is_verified = FALSE
+                is_verified = FALSE,
+                is_delete   = TRUE,
+                deleted_at  = NOW()
             WHERE id = %s
         """, (user_id,))
 
@@ -599,7 +601,7 @@ def admin_dashboard():
     # --------------------
     # USERS
     # --------------------
-    cursor.execute("SELECT id, username, email, is_admin FROM users")
+    cursor.execute("SELECT id, username, email, is_admin, is_active, is_delete FROM users")
     users = cursor.fetchall()
 
     # --------------------
@@ -671,10 +673,16 @@ def activate_user(user_id):
         return redirect("/")
 
     conn = get_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-    cursor.execute("UPDATE users SET is_active = TRUE WHERE id = %s", (user_id,))
-    conn.commit()
+    # Only reactivate accounts that were suspended (is_delete = FALSE)
+    # Do NOT reactivate accounts that were fully deleted (is_delete = TRUE)
+    cursor.execute("SELECT is_delete FROM users WHERE id = %s", (user_id,))
+    user = cursor.fetchone()
+
+    if user and not user["is_delete"]:
+        cursor.execute("UPDATE users SET is_active = TRUE WHERE id = %s", (user_id,))
+        conn.commit()
 
     cursor.close()
     conn.close()
@@ -690,9 +698,25 @@ def delete_user(user_id):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
-    conn.commit()
+    # Soft-delete: same approach as user self-deletion
+    cursor.execute("""
+        UPDATE users
+        SET password    = '',
+            username    = CONCAT('deleted_', id),
+            is_active   = FALSE,
+            is_verified = FALSE,
+            is_delete   = TRUE,
+            deleted_at  = NOW()
+        WHERE id = %s
+    """, (user_id,))
 
+    # Mark all pending tasks as deleted too
+    cursor.execute("""
+        UPDATE tasks SET is_deleted = TRUE
+        WHERE user_id = %s AND status = 'pending'
+    """, (user_id,))
+
+    conn.commit()
     cursor.close()
     conn.close()
 

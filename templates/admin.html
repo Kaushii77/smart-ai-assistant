@@ -79,17 +79,23 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if user.is_active %}
-                            <a href="/suspend/{{ user.id }}" class="btn btn-sm btn-warning">Suspend</a>
+                        {% if user.is_delete %}
+                            <span class="badge bg-danger">Deleted</span>
+                        {% elif not user.is_active %}
+                            <span class="badge bg-warning text-dark">Inactive</span>
+                            <a href="/activate/{{ user.id }}" class="btn btn-sm btn-success ms-1">Activate</a>
                         {% else %}
-                            <a href="/activate/{{ user.id }}" class="btn btn-sm btn-success">Activate</a>
+                            <span class="badge bg-success">Active</span>
+                            <a href="/suspend/{{ user.id }}" class="btn btn-sm btn-warning ms-1">Deactivate</a>
                         {% endif %}
 
-                        <a href="/delete-user/{{ user.id }}" 
-                        class="btn btn-sm btn-danger"
-                        onclick="return confirm('Delete this user?')">
+                        {% if not user.is_delete %}
+                        <a href="/delete-user/{{ user.id }}"
+                        class="btn btn-sm btn-danger ms-1"
+                        onclick="return confirm('Soft-delete this user? Their data will be preserved.')">
                         Delete
                         </a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -269,5 +275,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
 });
 </script>
+
+<footer class="text-center mt-4 mb-3 text-muted">
+    <small>Your intelligent assistant — always one step ahead.</small>
+</footer>
 
 {% endblock %}
