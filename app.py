@@ -80,143 +80,195 @@ def register():
 
     if request.method == "POST":
 
-        username = request.form["username"].strip()
-        email = request.form["email"].strip()
+        name  = request.form["name"].strip()
+        email = request.form["email"].strip().lower()
         password = request.form["password"]
         confirm_password = request.form["confirm_password"]
 
-        # 🔐 Email validation
+        # 🔐 Email format check
         email_pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
         if not re.match(email_pattern, email):
             flash("Invalid email format.", "danger")
-            return render_template("register.html",
-                                username=username,
-                                email=email)
+            return render_template("register.html", name=name, email=email)
+
+        # 🔐 Name length
+        if len(name) < 2:
+            flash("Name must be at least 2 characters.", "danger")
+            return render_template("register.html", name=name, email=email)
 
         # 🔐 Password match
         if password != confirm_password:
             flash("Passwords do not match.", "danger")
-            return render_template("register.html",
-                       username=username,
-                       email=email)
+            return render_template("register.html", name=name, email=email)
+
         # 🔐 Strong password rules
         if len(password) < 8:
             flash("Password must be at least 8 characters.", "danger")
-            return render_template("register.html",
-                       username=username,
-                       email=email)
+            return render_template("register.html", name=name, email=email)
         if not re.search(r"[A-Z]", password):
             flash("Password must contain at least one uppercase letter.", "danger")
-            return render_template("register.html",
-                       username=username,
-                       email=email)
+            return render_template("register.html", name=name, email=email)
         if not re.search(r"[a-z]", password):
             flash("Password must contain at least one lowercase letter.", "danger")
-            return render_template("register.html",
-                       username=username,
-                       email=email)
+            return render_template("register.html", name=name, email=email)
         if not re.search(r"\d", password):
             flash("Password must contain at least one number.", "danger")
-            return render_template("register.html",
-                       username=username,
-                       email=email)
-        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+            return render_template("register.html", name=name, email=email)
+        if not re.search(r'[!@#$%^&*(),.?\":{}<>]', password):
             flash("Password must contain at least one special character.", "danger")
-            return render_template("register.html",
-                       username=username,
-                       email=email)
+            return render_template("register.html", name=name, email=email)
+
         hashed_password = generate_password_hash(password)
+
+        # Auto-generate a unique username from name (kept for DB compatibility)
+        import uuid
+        base_username = re.sub(r"[^a-z0-9]", "", name.lower()) or "user"
+        username = base_username + "_" + uuid.uuid4().hex[:6]
 
         conn = get_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-        # 🔐 Check duplicate username or email
-        cursor.execute("SELECT * FROM users WHERE username=%s OR email=%s", (username, email))
+        # 🔐 Check duplicate email
+        cursor.execute("SELECT * FROM users WHERE email=%s", (email,))
         existing_user = cursor.fetchone()
 
         if existing_user:
-            flash("Username or Email already exists.", "danger")
+            flash("An account with this email already exists.", "danger")
             cursor.close()
             conn.close()
-            return render_template("register.html",
-                       username=username,
-                       email=email)
+            return render_template("register.html", name=name, email=email)
+
+        # Generate activation token (expires in 24 hours)
+        activation_token = serializer.dumps(email, salt="email-activation-salt")
+
         cursor.execute(
-            "INSERT INTO users (username, email, password) VALUES (%s, %s, %s)",
+            """INSERT INTO users (username, email, password, is_verified)
+               VALUES (%s, %s, %s, FALSE)""",
             (username, email, hashed_password)
         )
         conn.commit()
-
         cursor.close()
         conn.close()
 
-        flash("Account created successfully! Please login.", "success")
+        # Build activation link
+        base_url = os.environ.get("APP_URL", request.host_url.rstrip("/"))
+        activation_link = f"{base_url}/activate/{activation_token}"
+
+        # Send activation email
+        from email_service import send_email
+        send_email(
+            email,
+            "Activate Your Smart AI Assistant Account",
+            f"""Hi {name},
+
+Welcome to Smart AI Assistant! Please click the link below to activate your account:
+
+{activation_link}
+
+This link will expire in 24 hours.
+
+If you did not create this account, please ignore this email.
+
+Regards,
+Smart AI Assistant Team"""
+        )
+
+        flash("Account created! Please check your email to activate your account.", "info")
         return redirect("/login")
 
     return render_template("register.html")
 
-@app.route("/check-username")
-def check_username():
 
-    username = request.args.get("username")
+@app.route("/check-email")
+def check_email():
+    email = request.args.get("email", "").strip().lower()
+    conn = get_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    cursor.execute("SELECT id FROM users WHERE email=%s", (email,))
+    user = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return {"available": user is None}
+
+@app.route("/activate/<token>")
+def activate_account(token):
+    try:
+        email = serializer.loads(
+            token,
+            salt="email-activation-salt",
+            max_age=86400  # 24 hours
+        )
+    except Exception:
+        flash("Activation link is invalid or has expired. Please register again.", "danger")
+        return redirect("/register")
 
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
-
-    cursor.execute("SELECT id FROM users WHERE username=%s", (username,))
+    cursor.execute("SELECT * FROM users WHERE email=%s", (email,))
     user = cursor.fetchone()
 
+    if not user:
+        flash("Account not found. Please register again.", "danger")
+        cursor.close()
+        conn.close()
+        return redirect("/register")
+
+    if user.get("is_verified"):
+        flash("Account already activated. Please login.", "info")
+        cursor.close()
+        conn.close()
+        return redirect("/login")
+
+    cursor.execute("UPDATE users SET is_verified=TRUE WHERE email=%s", (email,))
+    conn.commit()
     cursor.close()
     conn.close()
 
-    if user:
-        return {"available": False}
-    else:
-        return {"available": True}
+    flash("🎉 Account activated successfully! You can now log in.", "success")
+    return redirect("/login")
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
 
     if request.method == "POST":
 
-        username = request.form["username"].strip()
+        email    = request.form["email"].strip().lower()
         password = request.form["password"]
 
         conn = get_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-
-        cursor.execute("SELECT * FROM users WHERE username=%s", (username,))
+        cursor.execute("SELECT * FROM users WHERE email=%s", (email,))
         user = cursor.fetchone()
-
         cursor.close()
         conn.close()
 
-        # 🔹 If user does not exist
+        # User not found
         if user is None:
-            flash("Invalid username or password.", "danger")
+            flash("Invalid email or password.", "danger")
             return redirect("/login")
 
-        # 🔹 If account is suspended
+        # Account suspended by admin
         if not user.get("is_active", True):
-            flash("Account suspended.", "danger")
+            flash("Your account has been suspended. Please contact support.", "danger")
             return redirect("/login")
 
-        # 🔹 If password correct
+        # Email not yet verified
+        if not user.get("is_verified", False):
+            flash("Please activate your account first. Check your email for the activation link.", "warning")
+            return redirect("/login")
+
+        # Password check
         if check_password_hash(user["password"], password):
-
             session.clear()
-
             remember = request.form.get("remember")
             session.permanent = bool(remember)
-
-            session["user_id"] = user["id"]
+            session["user_id"]  = user["id"]
             session["username"] = user["username"]
+            session["name"]     = user.get("name") or user["username"]
             session["is_admin"] = user["is_admin"]
-
             return redirect("/")
-
         else:
-            flash("Invalid username or password.", "danger")
+            flash("Invalid email or password.", "danger")
             return redirect("/login")
 
     return render_template("login.html")
@@ -337,22 +389,27 @@ def profile():
 
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
-
     cursor.execute("SELECT * FROM users WHERE id=%s", (session["user_id"],))
     user = cursor.fetchone()
 
     if request.method == "POST":
 
-        new_username = request.form["username"]
-        new_email = request.form["email"]
+        new_name  = request.form.get("name", "").strip()
+        new_email = request.form.get("email", "").strip().lower()
+
+        if not new_name or len(new_name) < 2:
+            flash("Name must be at least 2 characters.", "danger")
+            cursor.close()
+            conn.close()
+            return render_template("profile.html", user=user)
 
         cursor.execute(
             "UPDATE users SET username=%s, email=%s WHERE id=%s",
-            (new_username, new_email, session["user_id"])
+            (new_name, new_email, session["user_id"])
         )
-
         conn.commit()
-        session["username"] = new_username
+        session["username"] = new_name
+        session["name"]     = new_name
 
         cursor.close()
         conn.close()

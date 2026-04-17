@@ -3,69 +3,62 @@
 <head>
     <title>Register - Smart AI Assistant</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
     <style>
         body {
-            height: 100vh;
+            min-height: 100vh;
             background: linear-gradient(135deg, #1f4037, #99f2c8);
             display: flex;
             align-items: center;
             justify-content: center;
             font-family: 'Segoe UI', sans-serif;
+            padding: 20px 0;
         }
-
         .register-card {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255,255,255,0.15);
             backdrop-filter: blur(10px);
             border-radius: 15px;
             padding: 40px;
             width: 100%;
-            max-width: 420px;
+            max-width: 430px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.2);
             color: white;
         }
-
         .form-control {
             background: rgba(255,255,255,0.2);
             border: none;
             color: white;
             height: 56px;
         }
-
-        .form-control::placeholder {
-            color: #eee;
-        }
-
+        .form-control::placeholder { color: #ddd; }
         .form-control:focus {
             background: rgba(255,255,255,0.3);
             box-shadow: none;
             color: white;
         }
-
-        a {
-            color: #fff;
-            text-decoration: underline;
+        a { color: #fff; text-decoration: underline; }
+        a:hover { color: #f1f1f1; }
+        .input-group-text {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            cursor: pointer;
         }
-
-        a:hover {
-            color: #f1f1f1;
-        }
+        .password-strength { height: 4px; border-radius: 2px; transition: all 0.3s; }
+        .feedback-text { font-size: 0.78rem; min-height: 18px; }
+        .email-check { font-size: 0.78rem; min-height: 18px; }
     </style>
 </head>
-
 <body>
 
 <div class="register-card text-center">
-    <h3 class="mb-3">🤖 Smart AI Assistant</h3>
-    <p class="mb-4">Create your account to manage AI-powered tasks</p>
+    <h3 class="mb-1">🤖 Smart AI Assistant</h3>
+    <p class="mb-4 text-white-50">Create your account</p>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                <div class="alert alert-{{ category }} alert-dismissible fade show py-2" role="alert">
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
@@ -73,96 +66,163 @@
         {% endif %}
     {% endwith %}
 
-    <form method="POST">
+    <form method="POST" id="registerForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-        <div class="form-floating mb-3">
-            <input type="text"
-                   name="username"
-                   id="username"
-                   class="form-control"
-                   placeholder="Username"
-                   value="{{ username or '' }}"
-                   required>
-            <label for="username">Username</label>
-            <small id="username-feedback" class="d-block mt-1"></small>
+        <!-- Full Name -->
+        <div class="form-floating mb-2">
+            <input type="text" name="name" id="name"
+                   class="form-control" placeholder="Full Name"
+                   value="{{ name or '' }}" required minlength="2">
+            <label for="name">👤 Full Name</label>
         </div>
 
-        <div class="form-floating mb-3">
-            <input type="email"
-                   name="email"
-                   id="email"
-                   class="form-control"
-                   placeholder="Email"
-                   value="{{ email or '' }}"
-                   required>
-            <label for="email">Email Address</label>
+        <!-- Email -->
+        <div class="form-floating mb-1">
+            <input type="email" name="email" id="email"
+                   class="form-control" placeholder="Email Address"
+                   value="{{ email or '' }}" required autocomplete="email">
+            <label for="email">📧 Email Address</label>
+        </div>
+        <div class="email-check mb-2 text-start ps-1" id="emailFeedback"></div>
+
+        <!-- Password -->
+        <div class="input-group mb-1">
+            <div class="form-floating flex-grow-1">
+                <input type="password" name="password" id="password"
+                       class="form-control rounded-start" placeholder="Password" required>
+                <label for="password">🔒 Password</label>
+            </div>
+            <span class="input-group-text" onclick="togglePass('password')" title="Show/hide">👁</span>
+        </div>
+        <!-- Strength bar -->
+        <div class="mb-1">
+            <div class="progress" style="height:4px; background:rgba(255,255,255,0.2);">
+                <div id="strengthBar" class="progress-bar password-strength" style="width:0%"></div>
+            </div>
+        </div>
+        <div class="feedback-text text-start ps-1 mb-2" id="passwordFeedback"></div>
+
+        <!-- Confirm Password -->
+        <div class="input-group mb-2">
+            <div class="form-floating flex-grow-1">
+                <input type="password" name="confirm_password" id="confirm_password"
+                       class="form-control rounded-start" placeholder="Confirm Password" required>
+                <label for="confirm_password">🔒 Confirm Password</label>
+            </div>
+            <span class="input-group-text" onclick="togglePass('confirm_password')" title="Show/hide">👁</span>
+        </div>
+        <div class="feedback-text text-start ps-1 mb-3" id="confirmFeedback"></div>
+
+        <!-- Info box -->
+        <div class="alert alert-info py-2 text-start" style="font-size:0.82rem; background:rgba(13,202,240,0.2); border:none; color:#fff;">
+            📩 After registering you'll receive an <strong>activation email</strong>. Click the link to activate your account before logging in.
         </div>
 
-        <div class="form-floating mb-3">
-            <input type="password"
-                   name="password"
-                   id="password"
-                   class="form-control"
-                   placeholder="Password"
-                   required>
-            <label for="password">Password</label>
-        </div>
-
-        <div class="form-floating mb-3">
-            <input type="password"
-                   name="confirm_password"
-                   id="confirm_password"
-                   class="form-control"
-                   placeholder="Confirm Password"
-                   required>
-            <label for="confirm_password">Confirm Password</label>
-        </div>
-
-        <button type="submit" class="btn btn-primary w-100 mb-3">
+        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" id="submitBtn">
             Create Account
         </button>
-    </form>
 
-    <small>
-        Already have an account?
-        <a href="/login">Login here</a>
-    </small>
+        <small class="d-block mt-3">
+            Already have an account? <a href="/login">Sign in here</a>
+        </small>
+    </form>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
-const usernameInput = document.getElementById("username");
-const feedback = document.getElementById("username-feedback");
-const registerButton = document.querySelector("button[type='submit']");
+// ── Show/hide password ─────────────────────────────────────────────────────
+function togglePass(id) {
+    const el = document.getElementById(id);
+    el.type = el.type === "password" ? "text" : "password";
+}
 
-usernameInput.addEventListener("input", function() {
+// ── Email availability check ───────────────────────────────────────────────
+const emailInput    = document.getElementById("email");
+const emailFeedback = document.getElementById("emailFeedback");
+let emailOk = false;
+let emailTimer;
 
-    const username = usernameInput.value.trim();
-
-    if (username.length < 3) {
-        feedback.textContent = "Username must be at least 3 characters.";
-        feedback.className = "text-warning";
-        registerButton.disabled = true;
+emailInput.addEventListener("input", function () {
+    clearTimeout(emailTimer);
+    const val = emailInput.value.trim();
+    if (!val.includes("@") || !val.includes(".")) {
+        emailFeedback.textContent = "";
+        emailOk = false;
         return;
     }
-
-    fetch(`/check-username?username=${username}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.available) {
-                feedback.textContent = "Username available ✔";
-                feedback.className = "text-success small";
-                registerButton.disabled = false;
-            } else {
-                feedback.textContent = "Username already taken ❌";
-                feedback.className = "text-danger small";
-                registerButton.disabled = true;
-            }
-        });
+    emailTimer = setTimeout(() => {
+        fetch(`/check-email?email=${encodeURIComponent(val)}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.available) {
+                    emailFeedback.textContent = "✔ Email available";
+                    emailFeedback.className = "email-check text-success mb-2 text-start ps-1";
+                    emailOk = true;
+                } else {
+                    emailFeedback.textContent = "✘ An account with this email already exists";
+                    emailFeedback.className = "email-check text-danger mb-2 text-start ps-1";
+                    emailOk = false;
+                }
+            });
+    }, 500);
 });
-</script>
 
+// ── Password strength ──────────────────────────────────────────────────────
+const passwordInput   = document.getElementById("password");
+const strengthBar     = document.getElementById("strengthBar");
+const passwordFeedback = document.getElementById("passwordFeedback");
+
+function checkStrength(pw) {
+    let score = 0;
+    const checks = [
+        [pw.length >= 8,              "At least 8 characters"],
+        [/[A-Z]/.test(pw),            "One uppercase letter"],
+        [/[a-z]/.test(pw),            "One lowercase letter"],
+        [/\d/.test(pw),               "One number"],
+        [/[!@#$%^&*(),.?":{}|<>]/.test(pw), "One special character"],
+    ];
+    const missing = checks.filter(([ok]) => !ok).map(([, msg]) => msg);
+    score = checks.filter(([ok]) => ok).length;
+    return { score, missing };
+}
+
+passwordInput.addEventListener("input", function () {
+    const pw = passwordInput.value;
+    const { score, missing } = checkStrength(pw);
+    const pct = (score / 5) * 100;
+    const colors = ["#dc3545","#dc3545","#fd7e14","#ffc107","#28a745","#28a745"];
+    strengthBar.style.width = pct + "%";
+    strengthBar.style.background = colors[score];
+    if (missing.length > 0 && pw.length > 0) {
+        passwordFeedback.textContent = "Missing: " + missing.join(", ");
+        passwordFeedback.className = "feedback-text text-warning text-start ps-1 mb-2";
+    } else if (pw.length > 0) {
+        passwordFeedback.textContent = "✔ Strong password";
+        passwordFeedback.className = "feedback-text text-success text-start ps-1 mb-2";
+    } else {
+        passwordFeedback.textContent = "";
+    }
+    checkConfirm();
+});
+
+// ── Confirm password match ─────────────────────────────────────────────────
+const confirmInput   = document.getElementById("confirm_password");
+const confirmFeedback = document.getElementById("confirmFeedback");
+
+function checkConfirm() {
+    const pw  = passwordInput.value;
+    const cpw = confirmInput.value;
+    if (!cpw) { confirmFeedback.textContent = ""; return; }
+    if (pw === cpw) {
+        confirmFeedback.textContent = "✔ Passwords match";
+        confirmFeedback.className = "feedback-text text-success text-start ps-1 mb-2";
+    } else {
+        confirmFeedback.textContent = "✘ Passwords do not match";
+        confirmFeedback.className = "feedback-text text-danger text-start ps-1 mb-2";
+    }
+}
+confirmInput.addEventListener("input", checkConfirm);
+</script>
 </body>
 </html>
