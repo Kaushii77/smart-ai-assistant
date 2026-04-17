@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Session Ended - Smart AI Assistant</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <style>
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1f4037, #99f2c8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .card-box {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            padding: 48px 40px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+            color: white;
+            text-align: center;
+        }
+        .icon {
+            font-size: 3.5rem;
+            margin-bottom: 16px;
+        }
+        h3 {
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        p {
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 28px;
+            line-height: 1.6;
+        }
+        .btn-login {
+            background: white;
+            color: #1f4037;
+            font-weight: 600;
+            border: none;
+            padding: 12px 0;
+            border-radius: 8px;
+            width: 100%;
+            font-size: 1rem;
+            transition: opacity 0.2s;
+        }
+        .btn-login:hover {
+            opacity: 0.9;
+            color: #1f4037;
+        }
+        .divider {
+            border-color: rgba(255, 255, 255, 0.3);
+            margin: 24px 0;
+        }
+        .detail-box {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 14px 18px;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 24px;
+            text-align: left;
+        }
+        .detail-box strong {
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card-box">
+    {% if reason == "deleted" %}
+        <div class="icon">🗑️</div>
+        <h3>Account Deleted</h3>
+        <p>Your account has been deleted by an administrator. Your session has been ended.</p>
+        <div class="detail-box">
+            <strong>What this means:</strong><br>
+            Your account and associated data have been removed. You can re-register with the same email to restore your history.
+        </div>
+    {% else %}
+        <div class="icon">🔒</div>
+        <h3>Account Deactivated</h3>
+        <p>Your account has been deactivated by an administrator. Your session has been ended.</p>
+        <div class="detail-box">
+            <strong>What this means:</strong><br>
+            You cannot log in while your account is inactive. Please contact support if you believe this is a mistake.
+        </div>
+    {% endif %}
+
+    <hr class="divider">
+
+    <a href="/login" class="btn btn-login">Back to Login</a>
+
+    <small class="d-block mt-3" style="color: rgba(255,255,255,0.55);">
+        Need help?
+        <a href="mailto:smartassistant.official@gmail.com" style="color: rgba(255,255,255,0.8);">
+            smartassistant.official@gmail.com
+        </a>
+    </small>
+</div>
+
+<footer style="position: fixed; bottom: 0; width: 100%; text-align: center; padding: 10px; color: rgba(255,255,255,0.5); font-size: 0.8rem;">
+    For any queries, email us:
+    <a href="mailto:smartassistant.official@gmail.com" style="color: rgba(255,255,255,0.7);">smartassistant.official@gmail.com</a>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

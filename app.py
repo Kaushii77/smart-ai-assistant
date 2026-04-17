@@ -1284,11 +1284,51 @@ def logout():
     session.clear()
     return redirect("/login")
 
+# Public routes that don't need session validation
+_PUBLIC_ROUTES = {
+    "login", "register", "forgot_password", "reset_password",
+    "activate_account", "check_email", "session_ended", "static",
+    "cron_run_tasks"
+}
+
 @app.before_request
 def session_management():
+    if "user_id" not in session:
+        return  # Not logged in — nothing to check
 
-    if "user_id" in session:
-        session.modified = True
+    session.modified = True
+
+    # Skip check for public/auth routes to avoid DB hit on every static file
+    if request.endpoint in _PUBLIC_ROUTES:
+        return
+
+    conn = get_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    cursor.execute(
+        "SELECT is_active, is_delete FROM users WHERE id = %s",
+        (session["user_id"],)
+    )
+    user = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    if not user:
+        session.clear()
+        return redirect(url_for("session_ended", reason="deleted"))
+
+    if user["is_delete"]:
+        session.clear()
+        return redirect(url_for("session_ended", reason="deleted"))
+
+    if not user["is_active"]:
+        session.clear()
+        return redirect(url_for("session_ended", reason="suspended"))
+
+
+@app.route("/session-ended")
+def session_ended():
+    reason = request.args.get("reason", "suspended")
+    return render_template("session_ended.html", reason=reason)
 
 if __name__ == "__main__":
     app.run(debug=True)
