@@ -128,15 +128,61 @@ def register():
         conn = get_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-        # 🔐 Check duplicate email
-        cursor.execute("SELECT * FROM users WHERE email=%s", (email,))
+        # 🔐 Check if email already exists
+        cursor.execute("SELECT id, is_active, password FROM users WHERE email = %s", (email,))
         existing_user = cursor.fetchone()
 
         if existing_user:
-            flash("An account with this email already exists.", "danger")
+            # If the account is active (not soft-deleted), block registration
+            if existing_user["is_active"] and existing_user["password"]:
+                flash("An account with this email already exists.", "danger")
+                cursor.close()
+                conn.close()
+                return render_template("register.html", name=name, email=email)
+
+            # Account was soft-deleted — restore it with new credentials
+            # Tasks and support tickets linked to the old user_id are preserved!
+            old_user_id = existing_user["id"]
+            cursor.execute("""
+                UPDATE users
+                SET username    = %s,
+                    password    = %s,
+                    is_active   = TRUE,
+                    is_verified = FALSE
+                WHERE id = %s
+            """, (username, hashed_password, old_user_id))
+
+            # Re-activate any soft-deleted tasks for this user
+            cursor.execute("""
+                UPDATE tasks SET is_deleted = FALSE
+                WHERE user_id = %s AND is_deleted = TRUE
+            """, (old_user_id,))
+
+            conn.commit()
             cursor.close()
             conn.close()
-            return render_template("register.html", name=name, email=email)
+
+            # Generate activation token and send email (same flow as new user)
+            activation_token = serializer.dumps(email, salt="email-activation-salt")
+            base_url = os.environ.get("APP_URL", request.host_url.rstrip("/"))
+            activation_link = f"{base_url}/activate/{activation_token}"
+            from email_service import send_email
+            send_email(
+                email,
+                "Activate Your Smart AI Assistant Account",
+                f"""Hi {name},
+
+Welcome back to Smart AI Assistant! Your account has been restored. Please click the link below to activate:
+
+{activation_link}
+
+This link will expire in 24 hours.
+
+Regards,
+Smart AI Assistant Team"""
+            )
+            flash("Account restored! Please check your email to activate.", "success")
+            return redirect("/login")
 
         # Generate activation token (expires in 24 hours)
         activation_token = serializer.dumps(email, salt="email-activation-salt")
@@ -459,37 +505,69 @@ def change_password():
 
 @app.route("/delete-account", methods=["POST"])
 def delete_account():
-
+    """
+    Permanently delete account (soft-delete):
+    - Clears password, username, and marks the user as deleted.
+    - Tasks and support tickets are KEPT so they can be restored if
+      the user re-registers with the same email address.
+    - On re-registration, the new account's user_id will be linked
+      to the old tasks/tickets via email matching in register().
+    """
     if "user_id" not in session:
         return redirect("/login")
 
-    current_password = request.form["current_password"]
+    current_password = request.form.get("current_password", "").strip()
+    if not current_password:
+        flash("Please enter your password to confirm deletion.", "danger")
+        return redirect("/profile")
 
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-    cursor.execute("SELECT password FROM users WHERE id=%s", (session["user_id"],))
-    user = cursor.fetchone()
+    try:
+        cursor.execute("SELECT id, password FROM users WHERE id = %s", (session["user_id"],))
+        user = cursor.fetchone()
 
-    if not user:
+        if not user:
+            flash("User not found.", "danger")
+            return redirect("/profile")
+
+        if not check_password_hash(user["password"], current_password):
+            flash("Incorrect password. Account was NOT deleted.", "danger")
+            return redirect("/profile")
+
+        user_id = session["user_id"]
+
+        # Soft-delete: clear sensitive fields but keep the row so
+        # tasks/tickets remain linked by user_id.
+        # We store a tombstone marker so we know it was deleted.
+        cursor.execute("""
+            UPDATE users
+            SET password    = '',
+                username    = CONCAT('deleted_', id),
+                is_active   = FALSE,
+                is_verified = FALSE
+            WHERE id = %s
+        """, (user_id,))
+
+        # Mark all user's pending tasks as deleted too
+        cursor.execute("""
+            UPDATE tasks SET is_deleted = TRUE
+            WHERE user_id = %s AND status = 'pending'
+        """, (user_id,))
+
+        conn.commit()
+        session.clear()
+        flash("Your account has been permanently deleted.", "info")
+        return redirect("/login")
+
+    except Exception as e:
+        conn.rollback()
+        flash(f"An error occurred while deleting your account: {str(e)}", "danger")
+        return redirect("/profile")
+    finally:
         cursor.close()
         conn.close()
-        return redirect("/profile")
-
-    if not check_password_hash(user["password"], current_password):
-        cursor.close()
-        conn.close()
-        return redirect("/profile")
-
-    cursor.execute("DELETE FROM users WHERE id=%s", (session["user_id"],))
-    conn.commit()
-
-    cursor.close()
-    conn.close()
-
-    session.clear()
-
-    return redirect("/login")
 
 @app.route("/admin")
 def admin_dashboard():
