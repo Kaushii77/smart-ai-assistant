@@ -148,7 +148,9 @@ def register():
                 SET username    = %s,
                     password    = %s,
                     is_active   = TRUE,
-                    is_verified = FALSE
+                    is_verified = FALSE,
+                    is_delete   = FALSE,
+                    deleted_at  = NULL
                 WHERE id = %s
             """, (username, hashed_password, old_user_id))
 
