@@ -3,7 +3,7 @@
 from datetime import datetime
 from database import get_connection
 from psycopg2.extras import RealDictCursor
-from email_service import send_email
+from email_service import send_email, send_reminder_email
 import traceback
 
 
@@ -43,10 +43,22 @@ def check_tasks():
 
         for task in due_tasks:
             try:
-                send_email(
+                # Format task_time to readable IST string for the email card
+                from datetime import timezone, timedelta
+                _IST = timezone(timedelta(hours=5, minutes=30))
+                _tt  = task["task_time"]
+                if hasattr(_tt, "tzinfo"):
+                    _tt_ist = _tt.astimezone(_IST)
+                else:
+                    # Stored as UTC-naive → treat as UTC, convert to IST
+                    _tt_ist = _tt.replace(tzinfo=timezone.utc).astimezone(_IST)
+                task_time_str = _tt_ist.strftime("%-d %B %Y, %-I:%M %p")
+
+                send_reminder_email(
                     task["email"],
-                    f"⏰ Reminder: {task['action']}",
-                    task["task_message"]
+                    task["action"] or task["command"],
+                    task_time_str,
+                    task["task_message"] or ""
                 )
                 print(f"[check_tasks] Email sent for task {task['id']} to {task['email']}")
             except Exception as e:
