@@ -168,21 +168,8 @@ def register():
             activation_token = serializer.dumps(email, salt="email-activation-salt")
             base_url = os.environ.get("APP_URL", request.host_url.rstrip("/"))
             activation_link = f"{base_url}/activate/{activation_token}"
-            from email_service import send_email
-            send_email(
-                email,
-                "Activate Your Smart Assistant Account",
-                f"""Hi {name},
-
-Welcome back to Smart Assistant! Your account has been restored. Please click the link below to activate:
-
-{activation_link}
-
-This link will expire in 24 hours.
-
-Regards,
-Smart Assistant Team"""
-            )
+            from email_service import send_restore_email
+            send_restore_email(email, name, activation_link)
             flash("Account restored! Please check your email to activate.", "success")
             return redirect("/login")
 
@@ -203,23 +190,8 @@ Smart Assistant Team"""
         activation_link = f"{base_url}/activate/{activation_token}"
 
         # Send activation email
-        from email_service import send_email
-        send_email(
-            email,
-            "Activate Your Smart Assistant Account",
-            f"""Hi {name},
-
-Welcome to Smart Assistant! Please click the link below to activate your account:
-
-{activation_link}
-
-This link will expire in 24 hours.
-
-If you did not create this account, please ignore this email.
-
-Regards,
-Smart Assistant Team"""
-        )
+        from email_service import send_activation_email
+        send_activation_email(email, name, activation_link)
 
         flash("Account created! Please check your email to activate your account.", "info")
         return redirect("/login")
@@ -341,24 +313,8 @@ def forgot_password():
 
             reset_link = f"{request.host_url}reset-password/{token}"
 
-            from email_service import send_email
-
-            send_email(
-                email,
-                "Password Reset - Smart Assistant",
-                f"""
-            Hello,
-
-            Click the link below to reset your password:
-
-            {reset_link}
-
-            This link will expire in 10 minutes.
-
-            Regards,
-            Smart Assistant
-            """
-            )
+            from email_service import send_reset_email
+            send_reset_email(email, reset_link)
 
 
         flash("If the email exists, a reset link has been sent.", "info")
@@ -506,25 +462,9 @@ def request_email_change():
     session["email_change_new"]      = new_email
     session["email_change_expires"]  = time.time() + 600  # 10 minutes
 
-    from email_service import send_email
+    from email_service import send_otp_email
     try:
-        send_email(
-            new_email,
-            "Verify Your New Email – Smart Assistant",
-            f"""Hi,
-
-You requested to change your email address on Smart Assistant.
-
-Your verification code is:
-
-    {otp}
-
-This code is valid for 10 minutes. Do NOT share it with anyone.
-
-If you did not request this change, please ignore this email.
-
-— Smart Assistant Team"""
-        )
+        send_otp_email(new_email, new_email, otp)
         flash(f"A 6-digit verification code has been sent to {new_email}. Please enter it below.", "info")
     except Exception as e:
         flash(f"Failed to send verification email: {str(e)}", "danger")
@@ -890,23 +830,8 @@ def reply_ticket(ticket_id):
     cursor.close()
     conn.close()
 
-    from email_service import send_email
-
-    send_email(
-        user_email,
-        "Reply to your Support Ticket",
-        f"""
-Hello,
-
-Admin has replied to your support request.
-
-Reply:
-{reply_message}
-
-Thank you,
-Smart Assistant Team
-        """
-    )
+    from email_service import send_support_reply_email
+    send_support_reply_email(user_email, reply_message)
 
     return redirect("/admin")
 
