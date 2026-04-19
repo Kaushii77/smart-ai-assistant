@@ -32,7 +32,7 @@
                     {% endif %}
                 </td>
 
-                <td>{{ task.task_time }}</td>
+                <td>{{ task.task_time | to_ist }}</td>
                 <td>{{ task.task_message }}</td>
                 <td>
                     <a href="/delete/{{ task.id }}" 

@@ -20,7 +20,26 @@ from scheduler_service import check_tasks
 
 
 
-app = Flask(__name__)   # 👈 THIS MUST BE ABOVE @app.route
+app = Flask(__name__)
+
+# ── Jinja2 filter: convert UTC task_time → IST for display ───────────────────
+from datetime import timezone, timedelta as _td
+_IST = timezone(_td(hours=5, minutes=30))
+
+@app.template_filter("to_ist")
+def to_ist_filter(dt):
+    """Convert a naive UTC datetime (as stored in DB) to IST string for display."""
+    if dt is None:
+        return ""
+    try:
+        # task_time is stored as UTC-naive — attach UTC then convert to IST
+        if hasattr(dt, "tzinfo") and dt.tzinfo:
+            dt_ist = dt.astimezone(_IST)
+        else:
+            dt_ist = dt.replace(tzinfo=timezone.utc).astimezone(_IST)
+        return dt_ist.strftime("%Y-%m-%d %I:%M %p IST")
+    except Exception:
+        return str(dt)   # 👈 THIS MUST BE ABOVE @app.route
 
 from scheduler_service import scheduler
 
@@ -168,8 +187,21 @@ def register():
             activation_token = serializer.dumps(email, salt="email-activation-salt")
             base_url = os.environ.get("APP_URL", request.host_url.rstrip("/"))
             activation_link = f"{base_url}/activate/{activation_token}"
-            from email_service import send_restore_email
-            send_restore_email(email, name, activation_link)
+            from email_service import send_email
+            send_email(
+                email,
+                "Activate Your Smart Assistant Account",
+                f"""Hi {name},
+
+Welcome back to Smart Assistant! Your account has been restored. Please click the link below to activate:
+
+{activation_link}
+
+This link will expire in 24 hours.
+
+Regards,
+Smart Assistant Team"""
+            )
             flash("Account restored! Please check your email to activate.", "success")
             return redirect("/login")
 
@@ -190,8 +222,23 @@ def register():
         activation_link = f"{base_url}/activate/{activation_token}"
 
         # Send activation email
-        from email_service import send_activation_email
-        send_activation_email(email, name, activation_link)
+        from email_service import send_email
+        send_email(
+            email,
+            "Activate Your Smart Assistant Account",
+            f"""Hi {name},
+
+Welcome to Smart Assistant! Please click the link below to activate your account:
+
+{activation_link}
+
+This link will expire in 24 hours.
+
+If you did not create this account, please ignore this email.
+
+Regards,
+Smart Assistant Team"""
+        )
 
         flash("Account created! Please check your email to activate your account.", "info")
         return redirect("/login")
@@ -313,8 +360,24 @@ def forgot_password():
 
             reset_link = f"{request.host_url}reset-password/{token}"
 
-            from email_service import send_reset_email
-            send_reset_email(email, reset_link)
+            from email_service import send_email
+
+            send_email(
+                email,
+                "Password Reset - Smart Assistant",
+                f"""
+            Hello,
+
+            Click the link below to reset your password:
+
+            {reset_link}
+
+            This link will expire in 10 minutes.
+
+            Regards,
+            Smart Assistant
+            """
+            )
 
 
         flash("If the email exists, a reset link has been sent.", "info")
@@ -462,9 +525,25 @@ def request_email_change():
     session["email_change_new"]      = new_email
     session["email_change_expires"]  = time.time() + 600  # 10 minutes
 
-    from email_service import send_otp_email
+    from email_service import send_email
     try:
-        send_otp_email(new_email, new_email, otp)
+        send_email(
+            new_email,
+            "Verify Your New Email – Smart Assistant",
+            f"""Hi,
+
+You requested to change your email address on Smart Assistant.
+
+Your verification code is:
+
+    {otp}
+
+This code is valid for 10 minutes. Do NOT share it with anyone.
+
+If you did not request this change, please ignore this email.
+
+— Smart Assistant Team"""
+        )
         flash(f"A 6-digit verification code has been sent to {new_email}. Please enter it below.", "info")
     except Exception as e:
         flash(f"Failed to send verification email: {str(e)}", "danger")
@@ -830,8 +909,23 @@ def reply_ticket(ticket_id):
     cursor.close()
     conn.close()
 
-    from email_service import send_support_reply_email
-    send_support_reply_email(user_email, reply_message)
+    from email_service import send_email
+
+    send_email(
+        user_email,
+        "Reply to your Support Ticket",
+        f"""
+Hello,
+
+Admin has replied to your support request.
+
+Reply:
+{reply_message}
+
+Thank you,
+Smart Assistant Team
+        """
+    )
 
     return redirect("/admin")
 
