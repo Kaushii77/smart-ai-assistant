@@ -20,26 +20,7 @@ from scheduler_service import check_tasks
 
 
 
-app = Flask(__name__)
-
-# ── Jinja2 filter: convert UTC task_time → IST for display ───────────────────
-from datetime import timezone, timedelta as _td
-_IST = timezone(_td(hours=5, minutes=30))
-
-@app.template_filter("to_ist")
-def to_ist_filter(dt):
-    """Convert a naive UTC datetime (as stored in DB) to IST string for display."""
-    if dt is None:
-        return ""
-    try:
-        # task_time is stored as UTC-naive — attach UTC then convert to IST
-        if hasattr(dt, "tzinfo") and dt.tzinfo:
-            dt_ist = dt.astimezone(_IST)
-        else:
-            dt_ist = dt.replace(tzinfo=timezone.utc).astimezone(_IST)
-        return dt_ist.strftime("%Y-%m-%d %I:%M %p IST")
-    except Exception:
-        return str(dt)   # 👈 THIS MUST BE ABOVE @app.route
+app = Flask(__name__)   # 👈 THIS MUST BE ABOVE @app.route
 
 from scheduler_service import scheduler
 
@@ -973,20 +954,30 @@ def support():
     subject = request.form["subject"]
     message = request.form["message"]
 
+    # Basic validation
+    if not subject or not subject.strip():
+        flash("Please enter a subject.", "danger")
+        return redirect("/help")
+    if not message or not message.strip():
+        flash("Please enter a message.", "danger")
+        return redirect("/help")
+
     conn = get_connection()
     cursor = conn.cursor()
 
     # Save to database
     cursor.execute(
         "INSERT INTO support_tickets (user_id, subject, message) VALUES (%s, %s, %s)",
-        (session["user_id"], subject, message)
+        (session["user_id"], subject.strip(), message.strip())
     )
 
     conn.commit()
     cursor.close()
     conn.close()
 
-    return render_template("help.html", message="Support request submitted successfully!")
+    # Redirect so the full help page (with ticket history) reloads properly
+    flash("Your support request has been submitted successfully!", "success")
+    return redirect("/help")
 
 @app.route("/", methods=["GET", "POST"])
 def home():
