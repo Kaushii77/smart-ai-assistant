@@ -9,7 +9,21 @@ from flask import (
 from werkzeug.security import generate_password_hash, check_password_hash
 from database import get_connection
 from ai_parser import parse_command
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+# ── IST display helper ───────────────────────────────────────────────────────
+_IST = timezone(timedelta(hours=5, minutes=30))
+
+def _to_ist_str(dt):
+    """Convert UTC-naive datetime from DB → readable IST string."""
+    if dt is None:
+        return ""
+    try:
+        if hasattr(dt, "tzinfo") and dt.tzinfo:
+            return dt.astimezone(_IST).strftime("%d %b %Y, %I:%M %p IST")
+        return dt.replace(tzinfo=timezone.utc).astimezone(_IST).strftime("%d %b %Y, %I:%M %p IST")
+    except Exception:
+        return str(dt)
 from flask import request, jsonify
 from itsdangerous import URLSafeTimedSerializer
 from flask_wtf.csrf import CSRFProtect
@@ -954,30 +968,20 @@ def support():
     subject = request.form["subject"]
     message = request.form["message"]
 
-    # Basic validation
-    if not subject or not subject.strip():
-        flash("Please enter a subject.", "danger")
-        return redirect("/help")
-    if not message or not message.strip():
-        flash("Please enter a message.", "danger")
-        return redirect("/help")
-
     conn = get_connection()
     cursor = conn.cursor()
 
     # Save to database
     cursor.execute(
         "INSERT INTO support_tickets (user_id, subject, message) VALUES (%s, %s, %s)",
-        (session["user_id"], subject.strip(), message.strip())
+        (session["user_id"], subject, message)
     )
 
     conn.commit()
     cursor.close()
     conn.close()
 
-    # Redirect so the full help page (with ticket history) reloads properly
-    flash("Your support request has been submitted successfully!", "success")
-    return redirect("/help")
+    return render_template("help.html", message="Support request submitted successfully!")
 
 @app.route("/", methods=["GET", "POST"])
 def home():
@@ -1093,7 +1097,14 @@ def home():
     params.extend([per_page, offset])
 
     cursor.execute(query, tuple(params))
-    tasks = cursor.fetchall()
+    raw_tasks = cursor.fetchall()
+
+    # Convert task_time to IST string for display (DB stores UTC)
+    tasks = []
+    for t in raw_tasks:
+        t = dict(t)
+        t["task_time"] = _to_ist_str(t.get("task_time"))
+        tasks.append(t)
 
     total_pages = (total_tasks + per_page - 1) // per_page
 
@@ -1136,10 +1147,11 @@ def get_tasks():
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
     cursor.execute("SELECT * FROM tasks WHERE user_id=%s ORDER BY id DESC",(session["user_id"],))
-    tasks = cursor.fetchall()
+    raw_tasks = cursor.fetchall()
     cursor.close()
     conn.close()
 
+    tasks = [dict(t, task_time=_to_ist_str(t.get("task_time"))) for t in raw_tasks]
     return render_template("task_table.html", tasks=tasks)
 
 @app.route("/clear-completed")

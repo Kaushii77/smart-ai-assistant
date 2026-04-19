@@ -166,7 +166,7 @@
                                 <span class="badge bg-warning text-dark">Pending</span>
                             {% endif %}
                         </td>
-                        <td>{{ task.task_time | to_ist }}</td>
+                        <td>{{ task.task_time }}</td>
                         <td>{{ task.task_message }}</td>
                         <td>
                             {% if task.status == 'pending' %}
